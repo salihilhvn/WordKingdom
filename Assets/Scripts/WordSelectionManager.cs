@@ -6,7 +6,9 @@ public class WordSelectionManager : MonoBehaviour
 {
     [Header("Game Data (Testing)")]
     public List<string> targetWords = new List<string> { "UNITY", "GAME", "CODE", "WORD", "APPLE", "MAGIC", "OCEAN", "TIGER", "LIGHT", "SPACE" };
-
+    
+    [Tooltip("Bulunan kelimelerin kaydedildiği liste")]
+    public List<string> foundWords = new List<string>();
     [Header("Audio Settings")]
     public AudioSource audioSource;
     [Tooltip("Her harf seçildiğinde çıkacak kısa 'pıt' sesi")]
@@ -209,9 +211,17 @@ public class WordSelectionManager : MonoBehaviour
             reverseFormedWord += selectedTiles[i].letter;
         }
 
-        // Kelimenin hedef listesinde olup olmadığını kontrol et
-        if (targetWords.Contains(formedWord) || targetWords.Contains(reverseFormedWord))
+        // Hangi kelimenin bulunduğunu tespit et
+        string validWord = null;
+        if (targetWords.Contains(formedWord)) validWord = formedWord;
+        else if (targetWords.Contains(reverseFormedWord)) validWord = reverseFormedWord;
+
+        // Kelime hedef listesinde varsa VE daha önce bulunmamışsa
+        if (validWord != null && !foundWords.Contains(validWord))
         {
+            // Kelimeyi bulunanlar listesine ekle ki tekrar kabul edilmesin
+            foundWords.Add(validWord);
+
             if (audioSource != null && successSound != null)
             {
                 audioSource.pitch = 1f; // Başarı sesi normal incelikte çalsın
