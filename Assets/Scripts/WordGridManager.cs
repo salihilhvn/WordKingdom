@@ -59,12 +59,28 @@ public class WordGridManager : MonoBehaviour
             }
         }
 
-        // --- TEST KELİMELERİNİ BİLİNÇLİ OLARAK YERLEŞTİRME ---
-        // Sürüklemeyi test edebilmen için bazı kelimeleri grid içine zorla yazdırıyoruz:
-        InjectWord("UNITY", 0, 0, 1, 0); // En alt satırda (veya ilk satırda) yatay
-        InjectWord("GAME", 2, 1, 0, 1);  // 2. sütundan başlayıp yukarı doğru dikey
-        InjectWord("CODE", 4, 2, 1, 1);  // 4,2 koordinatından çapraz
-        InjectWord("WORD", 0, 5, 1, 0);  // 5. satırda yatay
+        // --- LEVEL 1 (YILAN GİBİ BİRBİRİNE BAĞLI TASARIM) ---
+        
+        // 1. UNITY yatay (Y=18)
+        InjectWord("UNITY", 2, 18, 1, 0); 
+        // 2. TIGER dikey aşağı (UNITY'nin T'si ile kesişir: 5,18)
+        InjectWord("TIGER", 5, 18, 0, -1);
+        // 3. GAME yatay (TIGER'ın G'si ile kesişir: 5,16)
+        InjectWord("GAME", 5, 16, 1, 0);
+        // 4. MAGIC dikey aşağı (GAME'in M'si ile kesişir: 7,16)
+        InjectWord("MAGIC", 7, 16, 0, -1);
+        // 5. CODE yatay SOLA doğru (MAGIC'in C'si ile kesişir: 7,12)
+        InjectWord("CODE", 7, 12, -1, 0);
+        // 6. OCEAN dikey aşağı (CODE'un O'su ile kesişir: 6,12)
+        InjectWord("OCEAN", 6, 12, 0, -1);
+        // 7. APPLE yatay SOLA doğru (OCEAN'in A'sı ile kesişir: 6,9)
+        InjectWord("APPLE", 6, 9, -1, 0);
+        // 8. SPACE dikey aşağı (APPLE'ın sol P'si ile kesişir: 4,9)
+        InjectWord("SPACE", 4, 10, 0, -1);
+
+        // Kesişmeyen, köşelerde saklanan bağımsız kelimeler:
+        InjectWord("WORD", 1, 2, 1, 0);  // Sol alt köşede yatay
+        InjectWord("LIGHT", 8, 2, 0, 1); // Sağ alt köşeden yukarı dikey
     }
 
     private void InjectWord(string word, int startX, int startY, int dx, int dy)

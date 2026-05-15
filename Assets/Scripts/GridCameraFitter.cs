@@ -15,6 +15,9 @@ public class GridCameraFitter : MonoBehaviour
     [Tooltip("Yanlardan (sağ ve sol) bırakılacak boşluk miktarı")]
     public float sidePadding = 0.5f;
 
+    [Tooltip("Kameranın bakış açısı (Tam tepeden 90, hafif açılı 85-80 vb.)")]
+    public float cameraAngle = 80f;
+
     void Start()
     {
         // Grid oluşturulduktan biraz sonra kamerayı ayarla
@@ -41,12 +44,11 @@ public class GridCameraFitter : MonoBehaviour
         float requiredHeight = gridHeight + topSpace + bottomSpace;
 
         // Kameranın Z eksenindeki kayması (Üst boşluk ile alt boşluk arasındaki farkın yarısı)
-        // Eğer üst boşluk daha fazlaysa, kamera Z'de yukarı kayar, böylece grid ekranda aşağıda görünür.
         float zOffset = (topSpace - bottomSpace) / 2f;
 
-        // Kamerayı Y=10 yüksekliğine ve hesaplanan Z offsetine yerleştir, aşağı bakmasını sağla
-        cam.transform.position = new Vector3(0, 10f, zOffset);
-        cam.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        // Kamerayı Y=10 yüksekliğine ve hesaplanan Z offsetine yerleştir, ayarlanan açıya göre döndür
+        cam.transform.position = new Vector3(0, 15f, zOffset - 5f); // Açılı bakacağı için biraz daha geriye alıyoruz
+        cam.transform.rotation = Quaternion.Euler(cameraAngle, 0f, 0f);
         cam.orthographic = true;
 
         // Ekranın en-boy oranına göre kameranın "size" değerini ayarlayarak sığdırıyoruz

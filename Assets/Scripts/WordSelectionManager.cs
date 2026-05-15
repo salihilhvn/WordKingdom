@@ -5,12 +5,31 @@ using UnityEngine.InputSystem;
 public class WordSelectionManager : MonoBehaviour
 {
     [Header("Game Data (Testing)")]
-    public List<string> targetWords = new List<string> { "UNITY", "GAME", "CODE", "WORD" };
+    public List<string> targetWords = new List<string> { "UNITY", "GAME", "CODE", "WORD", "APPLE", "MAGIC", "OCEAN", "TIGER", "LIGHT", "SPACE" };
+
+    [Header("Audio Settings")]
+    public AudioSource audioSource;
+    [Tooltip("Her harf seçildiğinde çıkacak kısa 'pıt' sesi")]
+    public AudioClip hoverSound;
+    [Tooltip("Doğru kelime bulunduğunda çıkacak ses")]
+    public AudioClip successSound;
+    [Tooltip("Yanlış kelimede çıkacak hata sesi")]
+    public AudioClip errorSound;
+
+    private float basePitch = 1.0f;
+    private float pitchIncreaseStep = 0.08f; // Her harfte sesin ne kadar inceleceği
 
     [Header("Selection State")]
     private List<LetterTile> selectedTiles = new List<LetterTile>();
     private Vector2Int currentDirection;
     private bool isSelecting = false;
+
+    private WordGridManager gridManager;
+
+    private void Start()
+    {
+        gridManager = FindAnyObjectByType<WordGridManager>();
+    }
 
     private void Update()
     {
@@ -95,19 +114,18 @@ public class WordSelectionManager : MonoBehaviour
 
     private void StartSelection(LetterTile tile)
     {
-        if (tile.isSolved) return;
-
         ClearSelection(); // Önceki seçimi temizle
         
         isSelecting = true;
         selectedTiles.Add(tile);
         tile.Select();
+        PlayHoverSound();
     }
 
     private void ProcessTileDuringDrag(LetterTile newTile)
     {
-        if (newTile.isSolved) return;
         if (selectedTiles.Count == 0) return;
+        if (selectedTiles.Contains(newTile)) return; // Zaten seçiliyse ekleme
 
         LetterTile lastTile = selectedTiles[selectedTiles.Count - 1];
 
@@ -159,6 +177,17 @@ public class WordSelectionManager : MonoBehaviour
     {
         selectedTiles.Add(tile);
         tile.Select();
+        PlayHoverSound();
+    }
+
+    private void PlayHoverSound()
+    {
+        if (audioSource != null && hoverSound != null)
+        {
+            // Seçili harf sayısına göre sesi inceleştir (Pitch Bending)
+            audioSource.pitch = basePitch + (selectedTiles.Count * pitchIncreaseStep);
+            audioSource.PlayOneShot(hoverSound);
+        }
     }
 
     private void EndSelection()
@@ -183,19 +212,75 @@ public class WordSelectionManager : MonoBehaviour
         // Kelimenin hedef listesinde olup olmadığını kontrol et
         if (targetWords.Contains(formedWord) || targetWords.Contains(reverseFormedWord))
         {
-            // 5. Kural (Zıttı): Kelime listede varsa, renkler başarılı rengine bürünsün
-            foreach (var t in selectedTiles)
+            if (audioSource != null && successSound != null)
             {
-                t.SetSolved();
+                audioSource.pitch = 1f; // Başarı sesi normal incelikte çalsın
+                audioSource.PlayOneShot(successSound);
             }
+
+            // 5. Kural (Zıttı): Kelime listede varsa, renkler başarılı rengine bürünsün
+            for (int i = 0; i < selectedTiles.Count; i++)
+            {
+                // Dalga efekti için her harfe 0.05 saniye gecikme veriyoruz
+                selectedTiles[i].SetSolved(i * 0.05f);
+            }
+
+            // Şok dalgası (Ripple Effect) tetikle
+            TriggerRippleEffect(selectedTiles);
         }
         else
         {
-            // 5. Kural: Kelime o levelde istenen listede yoksa tüm seçili karelerdeki renkler eskiye dönecek.
-            ClearSelection();
+            if (audioSource != null && errorSound != null)
+            {
+                audioSource.pitch = 1f;
+                audioSource.PlayOneShot(errorSound);
+            }
+
+            // Hata efekti: Tüm seçili harfler kırmızı yanıp titresin
+            foreach (var t in selectedTiles)
+            {
+                t.PlayErrorAnimation();
+            }
+        }
+
+        // Ses inceliğini (pitch) sıfırla
+        if (audioSource != null)
+        {
+            audioSource.pitch = basePitch;
         }
 
         selectedTiles.Clear();
+    }
+
+    private void TriggerRippleEffect(List<LetterTile> solvedTiles)
+    {
+        if (gridManager == null || gridManager.gridTiles == null) return;
+
+        // Bütün grid'i tara
+        for (int x = 0; x < gridManager.columns; x++)
+        {
+            for (int y = 0; y < gridManager.rows; y++)
+            {
+                LetterTile tile = gridManager.gridTiles[x, y];
+                if (tile == null || tile.isSolved) continue;
+
+                // Seçili kelimenin harflerine olan en kısa mesafeyi bul
+                float minDistance = float.MaxValue;
+                foreach (var st in solvedTiles)
+                {
+                    float dist = Vector2.Distance(new Vector2(x, y), new Vector2(st.x, st.y));
+                    if (dist < minDistance) minDistance = dist;
+                }
+
+                // Sadece belli bir mesafedekilere (Örn: 8 birim) dalga gönder
+                if (minDistance > 0 && minDistance < 8f)
+                {
+                    // Mesafeye göre gecikme hesapla (Dalganın yayılma hızı)
+                    float delay = minDistance * 0.04f;
+                    tile.PlayRippleAnimation(delay);
+                }
+            }
+        }
     }
 
     private void ClearSelection()
