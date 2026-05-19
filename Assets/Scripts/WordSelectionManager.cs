@@ -237,6 +237,14 @@ public class WordSelectionManager : MonoBehaviour
 
             // Şok dalgası (Ripple Effect) tetikle
             TriggerRippleEffect(selectedTiles);
+
+            // Altınları uçur
+            if (UIManager.Instance != null)
+            {
+                // Seçili harfleri kopyalayarak gönderiyoruz, çünkü EndSelection bitiminde selectedTiles temizleniyor.
+                List<LetterTile> solvedTilesCopy = new List<LetterTile>(selectedTiles);
+                UIManager.Instance.AnimateCoinsFromTiles(solvedTilesCopy);
+            }
         }
         else
         {
