@@ -23,14 +23,25 @@ public class WordSelectionManager : MonoBehaviour
 
     [Header("Selection State")]
     private List<LetterTile> selectedTiles = new List<LetterTile>();
-    private Vector2Int currentDirection;
     private bool isSelecting = false;
+    private LetterTile startTile;
+    
+    // Grid-Snapping için ekran-uzay vektörleri
+    private Vector2 screenGridX;
+    private Vector2 screenGridY;
+    private bool screenGridCalculated = false;
 
     private WordGridManager gridManager;
 
     private void Start()
     {
         gridManager = FindAnyObjectByType<WordGridManager>();
+        
+        // UI listesini hedef kelimelerle doldur
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.InitializeWordList(targetWords);
+        }
     }
 
     private void Update()
@@ -70,6 +81,8 @@ public class WordSelectionManager : MonoBehaviour
             if (hitTile != null)
             {
                 Debug.Log("Harfe başarıyla tıklandı: " + hitTile.letter);
+                startTile = hitTile;
+                CalculateScreenGridVectors();
                 StartSelection(hitTile);
             }
             else
@@ -78,13 +91,9 @@ public class WordSelectionManager : MonoBehaviour
             }
         }
         // 2. Basılı tutup sürüklendiği sürece
-        else if (isPointerPressed && isSelecting)
+        else if (isPointerPressed && isSelecting && startTile != null)
         {
-            LetterTile hitTile = GetTileUnderPointer(pointerPosition);
-            if (hitTile != null)
-            {
-                ProcessTileDuringDrag(hitTile);
-            }
+            ProcessDragSnap(pointerPosition);
         }
         // 3. Parmağını (veya mouse'u) çektiği an
         else if (isPointerUp)
@@ -119,75 +128,147 @@ public class WordSelectionManager : MonoBehaviour
         ClearSelection(); // Önceki seçimi temizle
         
         isSelecting = true;
+        startTile = tile;
         selectedTiles.Add(tile);
         tile.Select();
-        PlayHoverSound();
+        PlayHoverSound(1);
     }
 
-    private void ProcessTileDuringDrag(LetterTile newTile)
+    private void CalculateScreenGridVectors()
     {
-        if (selectedTiles.Count == 0) return;
-        if (selectedTiles.Contains(newTile)) return; // Zaten seçiliyse ekleme
+        if (gridManager == null || gridManager.gridTiles == null || gridManager.columns < 2 || gridManager.rows < 2) return;
+        
+        LetterTile t00 = gridManager.gridTiles[0, 0];
+        LetterTile t10 = gridManager.gridTiles[1, 0];
+        LetterTile t01 = gridManager.gridTiles[0, 1];
+        
+        if (t00 == null) return;
 
-        LetterTile lastTile = selectedTiles[selectedTiles.Count - 1];
+        Vector2 pos00 = Camera.main.WorldToScreenPoint(t00.transform.position);
+        
+        if (t10 != null)
+            screenGridX = ((Vector2)Camera.main.WorldToScreenPoint(t10.transform.position) - pos00);
+        else
+            screenGridX = Vector2.right * 100f;
+            
+        if (t01 != null)
+            screenGridY = ((Vector2)Camera.main.WorldToScreenPoint(t01.transform.position) - pos00);
+        else
+            screenGridY = Vector2.down * 100f;
+            
+        screenGridCalculated = true;
+    }
 
-        // Aynı tile'ın üstündeysek bir şey yapma
-        if (newTile == lastTile) return;
+    private void ProcessDragSnap(Vector2 pointerPosition)
+    {
+        if (!screenGridCalculated) return;
 
-        // Geri gitme (backtracking) kontrolü
-        if (selectedTiles.Count >= 2 && newTile == selectedTiles[selectedTiles.Count - 2])
+        Vector2 startScreenPos = Camera.main.WorldToScreenPoint(startTile.transform.position);
+        Vector2 dragVec = pointerPosition - startScreenPos;
+
+        float det = screenGridX.x * screenGridY.y - screenGridX.y * screenGridY.x;
+        if (Mathf.Abs(det) < 0.001f) return;
+
+        float u = (dragVec.x * screenGridY.y - dragVec.y * screenGridY.x) / det;
+        float v = (screenGridX.x * dragVec.y - screenGridX.y * dragVec.x) / det;
+
+        // Hassasiyet eşiği: Eğer parmak başlangıç harfinden çok az çıktıysa 0 kabul et
+        if (Mathf.Abs(u) < 0.3f && Mathf.Abs(v) < 0.3f)
         {
-            lastTile.Deselect();
-            selectedTiles.RemoveAt(selectedTiles.Count - 1);
+            UpdateSelectionLine(0, 0, 0);
             return;
         }
 
-        // Zaten seçili olan başka bir tile'a (geri gitme dışında) çarptıysak yoksay
-        if (selectedTiles.Contains(newTile)) return;
+        float angle = Mathf.Atan2(v, u) * Mathf.Rad2Deg;
+        if (angle < 0) angle += 360f;
+        
+        // 45 derecelik açılara yuvarla
+        float snappedAngle = Mathf.Round(angle / 45f) * 45f;
+        snappedAngle = snappedAngle % 360f;
+        
+        int stepX = 0; int stepY = 0;
+        if (snappedAngle == 0f) { stepX = 1; stepY = 0; }
+        else if (snappedAngle == 45f) { stepX = 1; stepY = 1; }
+        else if (snappedAngle == 90f) { stepX = 0; stepY = 1; }
+        else if (snappedAngle == 135f) { stepX = -1; stepY = 1; }
+        else if (snappedAngle == 180f) { stepX = -1; stepY = 0; }
+        else if (snappedAngle == 225f) { stepX = -1; stepY = -1; }
+        else if (snappedAngle == 270f) { stepX = 0; stepY = -1; }
+        else if (snappedAngle == 315f) { stepX = 1; stepY = -1; }
 
-        // İki tile arasındaki grid farkı
-        int dx = newTile.x - lastTile.x;
-        int dy = newTile.y - lastTile.y;
+        float projection = (u * stepX + v * stepY) / (stepX * stepX + stepY * stepY);
+        int count = Mathf.RoundToInt(projection);
+        
+        if (count < 0) count = 0;
+        
+        UpdateSelectionLine(stepX, stepY, count);
+    }
 
-        // 4. Kural: Önceki bastığı butonun komşu karelerinden birine basmayıp diğer butonları basınca 
-        // ilk bastığı buton rengi aynı şekilde eskiye dönecek yeni bastığı açık yeşil olacak.
-        bool isNeighbor = (Mathf.Abs(dx) <= 1 && Mathf.Abs(dy) <= 1) && !(dx == 0 && dy == 0);
+    private void UpdateSelectionLine(int stepX, int stepY, int count)
+    {
+        List<LetterTile> newSelection = new List<LetterTile>();
+        newSelection.Add(startTile);
 
-        if (!isNeighbor)
+        for (int i = 1; i <= count; i++)
         {
-            // Komşu olmayan tamamen alakasız bir yere sürüklediyse seçimi baştan başlat
-            StartSelection(newTile);
-            return;
-        }
-
-        // Eğer 2. tile'ı seçiyorsak, doğrultuyu belirle (örn: yatay, dikey, çapraz)
-        if (selectedTiles.Count == 1)
-        {
-            currentDirection = new Vector2Int(dx, dy);
-            AddTileToSelection(newTile);
-        }
-        else // Eğer 3. veya daha fazla tile seçiyorsak, doğrultunun aynı kalıp kalmadığını kontrol et
-        {
-            if (dx == currentDirection.x && dy == currentDirection.y)
+            int nx = startTile.x + stepX * i;
+            int ny = startTile.y + stepY * i;
+            
+            if (nx >= 0 && nx < gridManager.columns && ny >= 0 && ny < gridManager.rows)
             {
-                AddTileToSelection(newTile);
+                LetterTile tile = gridManager.gridTiles[nx, ny];
+                if (tile != null)
+                {
+                    newSelection.Add(tile);
+                }
+                else break;
+            }
+            else break;
+        }
+
+        bool changed = false;
+        if (newSelection.Count != selectedTiles.Count) changed = true;
+        else
+        {
+            for (int i = 0; i < newSelection.Count; i++)
+            {
+                if (newSelection[i] != selectedTiles[i])
+                {
+                    changed = true;
+                    break;
+                }
             }
         }
+
+        if (changed)
+        {
+            // Eskiden seçili olup yeni listede olmayanların seçimini kaldır
+            foreach (var t in selectedTiles)
+            {
+                if (!newSelection.Contains(t)) t.Deselect();
+            }
+            
+            // Yeni listede olup eskiden seçili olmayanları seç
+            for (int i = 0; i < newSelection.Count; i++)
+            {
+                var t = newSelection[i];
+                if (!selectedTiles.Contains(t))
+                {
+                    t.Select();
+                    PlayHoverSound(i + 1);
+                }
+            }
+            
+            selectedTiles = newSelection;
+        }
     }
 
-    private void AddTileToSelection(LetterTile tile)
-    {
-        selectedTiles.Add(tile);
-        tile.Select();
-        PlayHoverSound();
-    }
-
-    private void PlayHoverSound()
+    private void PlayHoverSound(int tileIndex = -1)
     {
         if (audioSource != null && hoverSound != null)
         {
-            // Seçili harf sayısına göre sesi inceleştir (Pitch Bending)
-            audioSource.pitch = basePitch + (selectedTiles.Count * pitchIncreaseStep);
+            int count = tileIndex == -1 ? selectedTiles.Count : tileIndex;
+            audioSource.pitch = basePitch + (count * pitchIncreaseStep);
             audioSource.PlayOneShot(hoverSound);
         }
     }
@@ -221,6 +302,11 @@ public class WordSelectionManager : MonoBehaviour
         {
             // Kelimeyi bulunanlar listesine ekle ki tekrar kabul edilmesin
             foundWords.Add(validWord);
+
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.CrossOutWord(validWord);
+            }
 
             if (audioSource != null && successSound != null)
             {
@@ -268,6 +354,7 @@ public class WordSelectionManager : MonoBehaviour
         }
 
         selectedTiles.Clear();
+        startTile = null;
     }
 
     private void TriggerRippleEffect(List<LetterTile> solvedTiles)
@@ -308,5 +395,6 @@ public class WordSelectionManager : MonoBehaviour
             t.Deselect();
         }
         selectedTiles.Clear();
+        startTile = null;
     }
 }

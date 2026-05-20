@@ -12,8 +12,11 @@ public class GridCameraFitter : MonoBehaviour
     [Tooltip("Alt taraftaki UI (Güçlendiriciler, Ayarlar vb.) için bırakılacak boşluk miktarı")]
     public float bottomSpace = 3f;
 
-    [Tooltip("Yanlardan (sağ ve sol) bırakılacak boşluk miktarı")]
-    public float sidePadding = 0.5f;
+    [Tooltip("Sol taraftaki UI (Kelime listesi vb.) için bırakılacak boşluk miktarı")]
+    public float leftSpace = 6f;
+
+    [Tooltip("Sağ taraftaki boşluk miktarı")]
+    public float rightSpace = 0.5f;
 
     [Tooltip("Kameranın bakış açısı (Tam tepeden 90, hafif açılı 85-80 vb.)")]
     public float cameraAngle = 80f;
@@ -43,14 +46,17 @@ public class GridCameraFitter : MonoBehaviour
         float gridHeight = gridManager.rows * gridManager.spacingY;
 
         // İhtiyaç duyulan toplam alan (Grid + Boşluklar)
-        float requiredWidth = gridWidth + (sidePadding * 2);
+        float requiredWidth = gridWidth + leftSpace + rightSpace;
         float requiredHeight = gridHeight + topSpace + bottomSpace;
 
+        // Kameranın X eksenindeki kayması (Sağ boşluk ile sol boşluk arasındaki farkın yarısı)
+        float xOffset = (rightSpace - leftSpace) / 2f;
+        
         // Kameranın Z eksenindeki kayması (Üst boşluk ile alt boşluk arasındaki farkın yarısı)
         float zOffset = (topSpace - bottomSpace) / 2f;
 
-        // Kamerayı ayarlanan yüksekliğe ve hesaplanan Z offsetine yerleştir, ayarlanan açıya göre döndür
-        cam.transform.position = new Vector3(0, cameraHeight, zOffset - 5f); // Açılı bakacağı için biraz daha geriye alıyoruz
+        // Kamerayı ayarlanan yüksekliğe ve hesaplanan X, Z offsetlerine yerleştir, ayarlanan açıya göre döndür
+        cam.transform.position = new Vector3(xOffset, cameraHeight, zOffset - 5f); // Açılı bakacağı için biraz daha geriye alıyoruz
         cam.transform.rotation = Quaternion.Euler(cameraAngle, 0f, 0f);
         cam.orthographic = true;
 

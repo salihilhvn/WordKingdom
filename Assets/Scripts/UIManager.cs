@@ -27,13 +27,27 @@ public class UIManager : MonoBehaviour
     public float coinFlyDuration = 0.5f; // Havada kalma süresi
 
     [Header("Multiplier Settings")]
-    public TMP_Text multiplierText;
-    public Image multiplierFill; // Type'ı Filled olmalı (Unity Inspector)
+    public TMP_Text multiplierText; // İsteğe bağlı eski text sistemi
+    
+    [Header("Multiplier Custom Visuals (Canvas Objects)")]
+    [Tooltip("Canvas'taki 4 eriyen bar Image'ini buraya sürükle (x2, x3, x4, x5)")]
+    public Image[] multiplierFillImages; 
+    [Tooltip("Canvas'taki 5 şekilli yazı Objesini buraya sürükle (x1, x2, x3, x4, x5)")]
+    public GameObject[] multiplierIconObjects; 
+    
     public float comboTime = 5f; // Ne kadar sürede yeni kelime bulunması lazım
     private float currentComboTimer = 0f;
     private int currentMultiplier = 1;
     private int wordsFoundInCombo = 0;
     
+    // Obje boyutlarının animasyonda bozulmaması için orijinal boyutlarını saklayacağız
+    private Dictionary<Transform, Vector3> originalScales = new Dictionary<Transform, Vector3>();
+    
+    [Header("Word List UI")]
+    public RectTransform wordListContainer;
+    public GameObject wordTextPrefab;
+    private Dictionary<string, TMP_Text> wordTexts = new Dictionary<string, TMP_Text>();
+
     private void Awake()
     {
         if (Instance == null) Instance = this;
@@ -42,6 +56,19 @@ public class UIManager : MonoBehaviour
 
     private void Start()
     {
+        // Canvas'ta senin ayarladığın orijinal boyutları (scale) kaydediyoruz
+        if (multiplierIconObjects != null)
+        {
+            foreach (var icon in multiplierIconObjects)
+                if (icon != null) originalScales[icon.transform] = icon.transform.localScale;
+        }
+        if (multiplierFillImages != null)
+        {
+            foreach (var bar in multiplierFillImages)
+                if (bar != null) originalScales[bar.transform] = bar.transform.localScale;
+        }
+        if (multiplierText != null) originalScales[multiplierText.transform] = multiplierText.transform.localScale;
+
         if (timeText != null)
         {
             originalTimeColor = timeText.color;
@@ -78,9 +105,14 @@ public class UIManager : MonoBehaviour
         {
             currentComboTimer -= Time.deltaTime;
             
-            if (multiplierFill != null)
+            // Aktif olan barı bul ve fillAmount'unu (erime miktarını) düşür
+            if (currentMultiplier > 1)
             {
-                multiplierFill.fillAmount = currentComboTimer / comboTime;
+                int barIndex = Mathf.Clamp(currentMultiplier - 2, 0, 3);
+                if (multiplierFillImages != null && multiplierFillImages.Length > barIndex && multiplierFillImages[barIndex] != null)
+                {
+                    multiplierFillImages[barIndex].fillAmount = currentComboTimer / comboTime;
+                }
             }
 
             if (currentComboTimer <= 0)
@@ -88,10 +120,6 @@ public class UIManager : MonoBehaviour
                 // Süre bitti, çarpanı sıfırla
                 ResetMultiplier();
             }
-        }
-        else
-        {
-            if (multiplierFill != null) multiplierFill.fillAmount = 0;
         }
     }
 
@@ -105,45 +133,74 @@ public class UIManager : MonoBehaviour
 
     private void UpdateMultiplierUI()
     {
+        // Önce tüm obje ve barları gizleyelim (temizlik)
+        if (multiplierIconObjects != null)
+        {
+            foreach (var icon in multiplierIconObjects)
+            {
+                if (icon != null) icon.SetActive(false);
+            }
+        }
+        if (multiplierFillImages != null)
+        {
+            foreach (var bar in multiplierFillImages)
+            {
+                if (bar != null) bar.gameObject.SetActive(false);
+            }
+        }
+
+        // 1. Şekilli Text İkonunu Aç (x1, x2, x3, x4, x5 -> index 0, 1, 2, 3, 4)
+        int textIndex = Mathf.Clamp(currentMultiplier - 1, 0, 4);
+        if (multiplierIconObjects != null && multiplierIconObjects.Length > textIndex && multiplierIconObjects[textIndex] != null)
+        {
+            multiplierIconObjects[textIndex].SetActive(true);
+            StartCoroutine(MultiplierPopRoutine(multiplierIconObjects[textIndex].transform));
+        }
+
+        // 2. Eriyen Barı Aç (Sadece x2, x3, x4, x5 için -> index 0, 1, 2, 3)
+        if (currentMultiplier > 1)
+        {
+            int barIndex = Mathf.Clamp(currentMultiplier - 2, 0, 3);
+            if (multiplierFillImages != null && multiplierFillImages.Length > barIndex && multiplierFillImages[barIndex] != null)
+            {
+                multiplierFillImages[barIndex].gameObject.SetActive(true);
+                StartCoroutine(MultiplierPopRoutine(multiplierFillImages[barIndex].transform));
+            }
+        }
+
+        // Eski text sistemi varsa pop efekti ver
         if (multiplierText != null)
         {
-            if (currentMultiplier > 1)
-            {
-                multiplierText.text = "x" + currentMultiplier.ToString();
-                multiplierText.gameObject.SetActive(true);
-            }
-            else
-            {
-                multiplierText.gameObject.SetActive(false); // Çarpan 1 iken yazıyı gizleyebiliriz
-            }
-            
-            // Tatlı bir büyüme efekti
-            StartCoroutine(MultiplierPopRoutine());
+            multiplierText.text = "x" + currentMultiplier.ToString();
+            StartCoroutine(MultiplierPopRoutine(multiplierText.transform));
         }
     }
 
-    private IEnumerator MultiplierPopRoutine()
+    private IEnumerator MultiplierPopRoutine(Transform targetTransform)
     {
-        if (multiplierText == null) yield break;
+        if (targetTransform == null) yield break;
+        
+        // Objenin ilk baştaki boyutunu al (Senin küçülttüğün hali)
+        Vector3 originalScale = originalScales.ContainsKey(targetTransform) ? originalScales[targetTransform] : targetTransform.localScale;
+        Vector3 targetScale = originalScale * 1.3f; // Kendi boyutunun %30'u kadar büyüsün
+
         float elapsed = 0f;
         float duration = 0.15f;
-        Vector3 originalScale = Vector3.one;
-        Vector3 targetScale = new Vector3(1.5f, 1.5f, 1.5f);
 
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            multiplierText.transform.localScale = Vector3.Lerp(originalScale, targetScale, elapsed / duration);
+            targetTransform.localScale = Vector3.Lerp(originalScale, targetScale, elapsed / duration);
             yield return null;
         }
         elapsed = 0f;
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            multiplierText.transform.localScale = Vector3.Lerp(targetScale, originalScale, elapsed / duration);
+            targetTransform.localScale = Vector3.Lerp(targetScale, originalScale, elapsed / duration);
             yield return null;
         }
-        multiplierText.transform.localScale = originalScale;
+        targetTransform.localScale = originalScale;
     }
 
     private void HandleTimer()
@@ -188,25 +245,80 @@ public class UIManager : MonoBehaviour
         timeText.text = string.Format("{0:00}:{1:00}", minutes, seconds);
     }
 
+    public void InitializeWordList(List<string> words)
+    {
+        if (wordListContainer == null || wordTextPrefab == null) return;
+        
+        foreach (Transform child in wordListContainer)
+        {
+            Destroy(child.gameObject);
+        }
+        wordTexts.Clear();
+        
+        foreach (string word in words)
+        {
+            GameObject obj = Instantiate(wordTextPrefab, wordListContainer);
+            TMP_Text textComp = obj.GetComponent<TMP_Text>();
+            if (textComp != null)
+            {
+                textComp.text = word;
+                wordTexts.Add(word, textComp);
+            }
+        }
+    }
+    
+    public void CrossOutWord(string word)
+    {
+        if (wordTexts.TryGetValue(word, out TMP_Text textComp))
+        {
+            // Üstünü çiz ve rengini soluklaştır
+            textComp.fontStyle |= FontStyles.Strikethrough;
+            textComp.color = new Color(textComp.color.r, textComp.color.g, textComp.color.b, 0.5f);
+            
+            StartCoroutine(WordTextPopRoutine(textComp));
+        }
+    }
+
+    private IEnumerator WordTextPopRoutine(TMP_Text textComp)
+    {
+        float elapsed = 0f;
+        float duration = 0.2f;
+        Vector3 originalScale = Vector3.one;
+        Vector3 targetScale = new Vector3(1.2f, 1.2f, 1.2f);
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            textComp.transform.localScale = Vector3.Lerp(originalScale, targetScale, elapsed / duration);
+            yield return null;
+        }
+
+        elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            textComp.transform.localScale = Vector3.Lerp(targetScale, originalScale, elapsed / duration);
+            yield return null;
+        }
+
+        textComp.transform.localScale = originalScale;
+    }
+
     // Doğru kelime bulunduğunda WordSelectionManager tarafından çağrılır
     public void AnimateCoinsFromTiles(List<LetterTile> solvedTiles)
     {
-        // Multiplier Mantığı
         wordsFoundInCombo++;
-        if (wordsFoundInCombo >= 2)
-        {
-            // İlk kelime 1x, ikinci 2x, üçüncü 3x (Maksimum 5x ile sınırlayabiliriz)
-            currentMultiplier = Mathf.Min(wordsFoundInCombo, 5); 
-        }
-        else
-        {
-            currentMultiplier = 1;
-        }
+        
+        // 1. Oyuncunun bu kelimeden kazanacağı parayı hesapla (İlk kelimede 1x, ikinci kelimede 2x...)
+        int coinsMultiplierToApply = Mathf.Min(wordsFoundInCombo, 5);
+        StartCoroutine(SpawnCoinsRoutine(solvedTiles, coinsMultiplierToApply));
+        
+        // 2. Arayüzü (UI) bir SONRAKİ hedef için güncelle (İlk kelimeyi buldu, artık x2 peşinde)
+        // Bu sayede 4 barımız tam oturuyor (x2, x3, x4, x5 hedefleri)
+        currentMultiplier = Mathf.Min(wordsFoundInCombo + 1, 5); 
         
         currentComboTimer = comboTime; // Süreyi fulle
         UpdateMultiplierUI(); // Ekrana yansıt
-
-        StartCoroutine(SpawnCoinsRoutine(solvedTiles, currentMultiplier));
     }
 
     private IEnumerator SpawnCoinsRoutine(List<LetterTile> solvedTiles, int multiplierToApply)
