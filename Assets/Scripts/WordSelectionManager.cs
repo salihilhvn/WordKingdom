@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 public class WordSelectionManager : MonoBehaviour
 {
     [Header("Game Data (Testing)")]
-    public List<string> targetWords = new List<string> { "UNITY", "GAME", "CODE", "WORD", "APPLE", "MAGIC", "OCEAN", "TIGER", "LIGHT", "SPACE" };
+    public List<string> targetWords = new List<string>();
     
     [Tooltip("Bulunan kelimelerin kaydedildiği liste")]
     public List<string> foundWords = new List<string>();
@@ -37,6 +37,20 @@ public class WordSelectionManager : MonoBehaviour
     {
         gridManager = FindAnyObjectByType<WordGridManager>();
         
+        // Eğer gridManager'da level varsa ilk levelin kelimelerini al
+        if (gridManager != null && gridManager.levels != null && gridManager.levels.Count > 0)
+        {
+            targetWords.Clear();
+            foreach (var placement in gridManager.levels[gridManager.currentLevelIndex].wordPlacements)
+            {
+                targetWords.Add(placement.word);
+            }
+        }
+        else if (targetWords.Count == 0) // Yedek senaryo
+        {
+             targetWords = new List<string> { "UNITY", "GAME", "CODE", "WORD", "APPLE", "MAGIC", "OCEAN", "TIGER", "LIGHT", "SPACE" };
+        }
+
         // UI listesini hedef kelimelerle doldur
         if (UIManager.Instance != null)
         {
@@ -331,6 +345,8 @@ public class WordSelectionManager : MonoBehaviour
                 List<LetterTile> solvedTilesCopy = new List<LetterTile>(selectedTiles);
                 UIManager.Instance.AnimateCoinsFromTiles(solvedTilesCopy);
             }
+
+            CheckLevelCompletion();
         }
         else
         {
@@ -396,5 +412,61 @@ public class WordSelectionManager : MonoBehaviour
         }
         selectedTiles.Clear();
         startTile = null;
+    }
+
+    private void CheckLevelCompletion()
+    {
+        if (foundWords.Count >= targetWords.Count)
+        {
+            StartCoroutine(NextLevelRoutine());
+        }
+    }
+
+    private System.Collections.IEnumerator NextLevelRoutine()
+    {
+        yield return new WaitForSeconds(1.5f); // Dalga efekti ve coin animasyonlarının bitmesini bekle
+
+        if (gridManager != null && gridManager.levels.Count > 0)
+        {
+            // Kayıt (Save) Sistemi: Mevcut bölüm bitince bir sonrakini aç
+            int currentUnlocked = PlayerPrefs.GetInt("UnlockedLevel", 0);
+            if (gridManager.currentLevelIndex >= currentUnlocked)
+            {
+                PlayerPrefs.SetInt("UnlockedLevel", gridManager.currentLevelIndex + 1);
+            }
+
+            gridManager.currentLevelIndex++;
+            if (gridManager.currentLevelIndex >= gridManager.levels.Count)
+            {
+                // Bölümler biterse şimdilik başa sarsın
+                gridManager.currentLevelIndex = 0; 
+                Debug.Log("Tüm bölümler bitti, başa dönüldü!");
+            }
+
+            // Bir sonraki bölümü de SelectedLevel olarak kaydet ki oyunu kapatsa da oradan başlasın
+            PlayerPrefs.SetInt("SelectedLevel", gridManager.currentLevelIndex);
+            PlayerPrefs.Save();
+
+            // Temizlik
+            foundWords.Clear();
+            targetWords.Clear();
+
+            // Yeni bölüm kelimelerini al
+            foreach(var placement in gridManager.levels[gridManager.currentLevelIndex].wordPlacements)
+            {
+                targetWords.Add(placement.word);
+            }
+
+            // Arayüzü ve Tabloyu Yenile
+            gridManager.GenerateGrid();
+
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.ResetUI(120f);
+                UIManager.Instance.InitializeWordList(targetWords);
+            }
+
+            Debug.Log("Seviye " + (gridManager.currentLevelIndex + 1) + " Başladı!");
+        }
     }
 }

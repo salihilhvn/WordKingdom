@@ -24,6 +24,9 @@ public class MainMenuManager : MonoBehaviour
     public RectTransform activeSignifier;
     public float slideDuration = 0.35f; // Kayma süresi
 
+    [Header("Levels Panel")]
+    public LevelsPanelManager levelsPanelManager;
+
     // Her butonun orijinal boyutunu aklımızda tutmak için sözlük
     private Dictionary<RectTransform, Vector3> originalScales = new Dictionary<RectTransform, Vector3>();
 
@@ -53,10 +56,21 @@ public class MainMenuManager : MonoBehaviour
 
     private void OnPlayClicked()
     {
+        // Direk Play'e basarsa kalınan en son bölümü (Current_Box) açsın
+        int unlockedLevel = PlayerPrefs.GetInt("UnlockedLevel", 0);
+        PlayerPrefs.SetInt("SelectedLevel", unlockedLevel);
+        PlayerPrefs.Save();
         SceneManager.LoadScene("Gameplay"); 
     }
 
-    private void OnLevelsClicked() {}
+    private void OnLevelsClicked() 
+    {
+        if (levelsPanelManager != null)
+        {
+            levelsPanelManager.OpenPanel();
+        }
+    }
+    
     private void OnSettingsClicked() {}
     private void OnHelpClicked() {}
 

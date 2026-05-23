@@ -245,6 +245,25 @@ public class UIManager : MonoBehaviour
         timeText.text = string.Format("{0:00}:{1:00}", minutes, seconds);
     }
 
+    public void ResetUI(float initialTime = 120f)
+    {
+        remainingTime = initialTime;
+        isTimerRunning = true;
+        if (timeText != null)
+        {
+            timeText.color = originalTimeColor;
+            timeText.transform.localScale = Vector3.one;
+        }
+
+        currentCoins = 0;
+        if (coinsText != null)
+        {
+            coinsText.text = currentCoins.ToString();
+        }
+
+        ResetMultiplier();
+    }
+
     public void InitializeWordList(List<string> words)
     {
         if (wordListContainer == null || wordTextPrefab == null) return;
