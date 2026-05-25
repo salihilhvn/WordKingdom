@@ -245,9 +245,9 @@ public class UIManager : MonoBehaviour
         timeText.text = string.Format("{0:00}:{1:00}", minutes, seconds);
     }
 
-    public void ResetUI(float initialTime = 120f)
+    public void ResetUI(float newTime)
     {
-        remainingTime = initialTime;
+        remainingTime = newTime;
         isTimerRunning = true;
         if (timeText != null)
         {

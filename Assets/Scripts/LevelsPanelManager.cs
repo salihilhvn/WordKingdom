@@ -66,7 +66,10 @@ public class LevelsPanelManager : MonoBehaviour
             {
                 // Geçilmiş Bölüm (Mavi)
                 if (btnImage != null && doneSprite != null) btnImage.sprite = doneSprite;
-                btn.interactable = false; // Tıklanamaz
+                btn.interactable = true; // Opaklığın düşmemesi için interactable yapıyoruz (ayrıca tekrar oynanabilir)
+                
+                int levelIndexToLoad = i;
+                btn.onClick.AddListener(() => OnLevelButtonClicked(levelIndexToLoad));
             }
             else if (i == unlockedLevel)
             {
