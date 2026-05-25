@@ -65,6 +65,9 @@ public class WordSelectionManager : MonoBehaviour
 
     private void HandleInput()
     {
+        if (UIManager.Instance != null && UIManager.Instance.IsPopupActive())
+            return; // Pop-up açıksa arkadaki harflere tıklanmasını tamamen engelle
+
         bool isPointerDown = false;
         bool isPointerPressed = false;
         bool isPointerUp = false;
@@ -424,17 +427,39 @@ public class WordSelectionManager : MonoBehaviour
 
     private System.Collections.IEnumerator NextLevelRoutine()
     {
-        yield return new WaitForSeconds(1.5f); // Dalga efekti ve coin animasyonlarının bitmesini bekle
+        // 1. Şok dalgası ve altınların animasyonuna başlaması için çok kısa bir an bekle
+        yield return new WaitForSeconds(0.4f);
 
-        if (gridManager != null && gridManager.levels.Count > 0)
+        // 2. Kullanılmayan harfleri fizikle aşağı dök!
+        if (gridManager != null)
         {
-            // Kayıt (Save) Sistemi: Mevcut bölüm bitince bir sonrakini aç
+            gridManager.DropUnusedTiles();
+        }
+
+        // 3. Dökülme şovunu izlemek için 1.5 saniye daha bekle
+        yield return new WaitForSeconds(1.5f);
+
+        if (gridManager != null)
+        {
+            // Oynanılan bölümü anında geçilmiş olarak kaydet (Menüye dönse bile kilit açık kalsın)
             int currentUnlocked = PlayerPrefs.GetInt("UnlockedLevel", 0);
             if (gridManager.currentLevelIndex >= currentUnlocked)
             {
                 PlayerPrefs.SetInt("UnlockedLevel", gridManager.currentLevelIndex + 1);
+                PlayerPrefs.Save();
             }
+        }
 
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.ShowLevelPassed();
+        }
+    }
+
+    public void LoadNextLevel()
+    {
+        if (gridManager != null && gridManager.levels.Count > 0)
+        {
             gridManager.currentLevelIndex++;
             if (gridManager.currentLevelIndex >= gridManager.levels.Count)
             {
@@ -467,6 +492,21 @@ public class WordSelectionManager : MonoBehaviour
             }
 
             Debug.Log("Seviye " + (gridManager.currentLevelIndex + 1) + " Başladı!");
+        }
+    }
+
+    public void RestartCurrentLevel()
+    {
+        foundWords.Clear();
+        if (gridManager != null)
+        {
+            gridManager.GenerateGrid();
+        }
+        
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.ResetUI(120f);
+            UIManager.Instance.InitializeWordList(targetWords);
         }
     }
 }

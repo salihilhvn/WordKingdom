@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 
 public class UIManager : MonoBehaviour
 {
@@ -48,6 +49,33 @@ public class UIManager : MonoBehaviour
     public GameObject wordTextPrefab;
     private Dictionary<string, TMP_Text> wordTexts = new Dictionary<string, TMP_Text>();
 
+    [Header("End Game Panels")]
+    public GameObject levelPassedPanel;
+    [Tooltip("Level Passed panelindeki sayarak artan Coin Text'i")]
+    public TMP_Text levelPassedCoinText; 
+    public Button lpWatchAdButton;
+    public Button lpNextLevelButton;
+    public Button lpMainMenuButton;
+
+    public GameObject levelFailedPanel;
+    public Button lfWatchAdButton;
+    public Button lfTryAgainButton;
+    public Button lfMainMenuButton;
+
+    [Tooltip("Popuplar açıldığında arkadaki oyun alanını karartan/blurlayan panel")]
+    public GameObject blurBackgroundPanel;
+
+    private Coroutine coinAnimCoroutine;
+    private bool isCoinAnimRunning = false;
+
+    public bool IsPopupActive()
+    {
+        return (levelPassedPanel != null && levelPassedPanel.activeSelf) || 
+               (levelFailedPanel != null && levelFailedPanel.activeSelf);
+    }
+
+    private Vector2 levelFailedOriginalPos;
+
     private void Awake()
     {
         if (Instance == null) Instance = this;
@@ -91,12 +119,54 @@ public class UIManager : MonoBehaviour
             Image targetImage = coinTargetUI.GetComponent<Image>();
             if (targetImage != null) coinSprite = targetImage.sprite;
         }
+
+        // Buton Dinleyicileri (Listeners)
+        if (lpWatchAdButton) lpWatchAdButton.onClick.AddListener(OnWatchAdCoins);
+        if (lpNextLevelButton) lpNextLevelButton.onClick.AddListener(OnNextLevel);
+        if (lpMainMenuButton) lpMainMenuButton.onClick.AddListener(OnMainMenu);
+        
+        if (lfWatchAdButton) lfWatchAdButton.onClick.AddListener(OnWatchAdTime);
+        if (lfTryAgainButton) lfTryAgainButton.onClick.AddListener(OnTryAgain);
+        if (lfMainMenuButton) lfMainMenuButton.onClick.AddListener(OnMainMenu);
+        
+        // Panelleri başlangıçta gizle
+        if (levelPassedPanel) levelPassedPanel.SetActive(false);
+        if (levelFailedPanel) 
+        {
+            levelFailedPanel.SetActive(false);
+            RectTransform rect = levelFailedPanel.GetComponent<RectTransform>();
+            if (rect) levelFailedOriginalPos = rect.anchoredPosition;
+        }
+        if (blurBackgroundPanel) blurBackgroundPanel.SetActive(false);
     }
 
     private void Update()
     {
         HandleTimer();
         HandleMultiplier();
+
+        // Level Passed panelindeki altın sayma animasyonunu tıklayarak geçme
+        if (isCoinAnimRunning)
+        {
+            bool isSkipPressed = false;
+            
+            if (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                isSkipPressed = true;
+            }
+            else if (UnityEngine.InputSystem.Touchscreen.current != null && UnityEngine.InputSystem.Touchscreen.current.touches.Count > 0)
+            {
+                if (UnityEngine.InputSystem.Touchscreen.current.touches[0].phase.ReadValue() == UnityEngine.InputSystem.TouchPhase.Began)
+                {
+                    isSkipPressed = true;
+                }
+            }
+
+            if (isSkipPressed)
+            {
+                isCoinAnimRunning = false; // Coroutine döngüsünü kırar ve anında sonucu yazar
+            }
+        }
     }
 
     private void HandleMultiplier()
@@ -215,7 +285,8 @@ public class UIManager : MonoBehaviour
             isTimerRunning = false;
             timeText.color = Color.red;
             UpdateTimerText();
-            // BURAYA SÜRE BİTTİĞİNDE OLACAKLAR EKLENEBİLİR (Game Over vs.)
+            // Süre bittiğinde Level Failed göster
+            ShowLevelFailed();
             return;
         }
 
@@ -494,5 +565,184 @@ public class UIManager : MonoBehaviour
         }
 
         coinsText.transform.localScale = originalScale;
+    }
+
+    public void ShowLevelPassed()
+    {
+        isTimerRunning = false;
+        if (blurBackgroundPanel) 
+        {
+            blurBackgroundPanel.SetActive(true);
+            Image blurImg = blurBackgroundPanel.GetComponent<Image>();
+            if (blurImg != null) StartCoroutine(FadeBlur(blurImg, 0.6f)); // %60 saydamlığa yavaşça geç
+        }
+        
+        if (levelPassedPanel) 
+        {
+            levelPassedPanel.SetActive(true);
+            StartCoroutine(BouncePopAnim(levelPassedPanel.transform));
+        }
+
+        if (lpWatchAdButton) lpWatchAdButton.interactable = true; // Yeni bölüme geçince butonu tekrar aktif et
+
+        if (levelPassedCoinText) 
+        {
+            levelPassedCoinText.text = "0";
+            if (coinAnimCoroutine != null) StopCoroutine(coinAnimCoroutine);
+            coinAnimCoroutine = StartCoroutine(AnimateCoinsTo(currentCoins));
+        }
+    }
+
+    private IEnumerator AnimateCoinsTo(int targetCoins)
+    {
+        isCoinAnimRunning = true;
+        float duration = 1.5f; // Animasyon 1.5 saniye sürsün
+        float elapsed = 0f;
+        int startCoins = 0;
+
+        while (elapsed < duration)
+        {
+            if (!isCoinAnimRunning) break; // Eğer kullanıcı ekrana tıklayıp geçmek isterse
+            
+            elapsed += Time.deltaTime;
+            int current = Mathf.RoundToInt(Mathf.Lerp(startCoins, targetCoins, elapsed / duration));
+            levelPassedCoinText.text = current.ToString();
+            yield return null;
+        }
+
+        levelPassedCoinText.text = targetCoins.ToString();
+        isCoinAnimRunning = false;
+    }
+
+    public void ShowLevelFailed()
+    {
+        isTimerRunning = false;
+        if (blurBackgroundPanel) 
+        {
+            blurBackgroundPanel.SetActive(true);
+            Image blurImg = blurBackgroundPanel.GetComponent<Image>();
+            if (blurImg != null) StartCoroutine(FadeBlur(blurImg, 0.6f));
+        }
+        
+        if (levelFailedPanel) 
+        {
+            levelFailedPanel.SetActive(true);
+            StartCoroutine(DropBounceAnim(levelFailedPanel.transform));
+        }
+    }
+
+    private IEnumerator FadeBlur(Image blurImg, float targetAlpha, float duration = 0.5f)
+    {
+        Color c = blurImg.color;
+        float startAlpha = 0f;
+        c.a = startAlpha;
+        blurImg.color = c;
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            c.a = Mathf.Lerp(startAlpha, targetAlpha, elapsed / duration);
+            blurImg.color = c;
+            yield return null;
+        }
+        c.a = targetAlpha;
+        blurImg.color = c;
+    }
+
+    private IEnumerator BouncePopAnim(Transform target)
+    {
+        target.localScale = Vector3.zero;
+        float elapsed = 0f;
+        float duration = 0.4f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            // EaseOutBack Formülü
+            float s = 1.70158f;
+            float easedT = ((t = t - 1) * t * ((s + 1) * t + s) + 1);
+            
+            float scale = Mathf.LerpUnclamped(0f, 1f, easedT);
+            target.localScale = new Vector3(scale, scale, scale);
+            yield return null;
+        }
+        target.localScale = Vector3.one;
+    }
+
+    private IEnumerator DropBounceAnim(Transform target)
+    {
+        RectTransform rect = target.GetComponent<RectTransform>();
+        if (rect == null) yield break;
+
+        Vector2 endPos = levelFailedOriginalPos;
+        Vector2 startPos = endPos + new Vector2(0, Screen.height + 500f);
+
+        rect.anchoredPosition = startPos;
+        float elapsed = 0f;
+        float duration = 0.6f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            
+            // EaseOutBounce Formülü
+            float easedT = 0f;
+            if (t < (1 / 2.75f)) {
+                easedT = (7.5625f * t * t);
+            } else if (t < (2 / 2.75f)) {
+                easedT = (7.5625f * (t -= (1.5f / 2.75f)) * t + 0.75f);
+            } else if (t < (2.5 / 2.75f)) {
+                easedT = (7.5625f * (t -= (2.25f / 2.75f)) * t + 0.9375f);
+            } else {
+                easedT = (7.5625f * (t -= (2.625f / 2.75f)) * t + 0.984375f);
+            }
+
+            float yPos = Mathf.LerpUnclamped(startPos.y, endPos.y, easedT);
+            rect.anchoredPosition = new Vector2(endPos.x, yPos);
+            yield return null;
+        }
+        rect.anchoredPosition = endPos;
+    }
+
+    private void OnWatchAdCoins()
+    {
+        // Şimdilik 2 katı verelim direkt (Daha sonra gerçek AD sistemi eklenecek)
+        currentCoins *= 2;
+        if (coinsText) coinsText.text = currentCoins.ToString();
+        if (levelPassedCoinText) levelPassedCoinText.text = currentCoins.ToString();
+        
+        // Butonu kapat ki 2 kere izleyemesin
+        if (lpWatchAdButton) lpWatchAdButton.interactable = false;
+    }
+
+    private void OnNextLevel()
+    {
+        if (levelPassedPanel) levelPassedPanel.SetActive(false);
+        if (blurBackgroundPanel) blurBackgroundPanel.SetActive(false);
+        FindAnyObjectByType<WordSelectionManager>().LoadNextLevel();
+    }
+
+    private void OnMainMenu()
+    {
+        SceneManager.LoadScene("MainMenu");
+    }
+
+    private void OnWatchAdTime()
+    {
+        // 20 saniye ekle ve devam et
+        remainingTime += 20f;
+        isTimerRunning = true;
+        if (levelFailedPanel) levelFailedPanel.SetActive(false);
+        if (blurBackgroundPanel) blurBackgroundPanel.SetActive(false);
+    }
+
+    private void OnTryAgain()
+    {
+        if (levelFailedPanel) levelFailedPanel.SetActive(false);
+        if (blurBackgroundPanel) blurBackgroundPanel.SetActive(false);
+        FindAnyObjectByType<WordSelectionManager>().RestartCurrentLevel();
     }
 }

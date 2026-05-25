@@ -331,4 +331,37 @@ public class WordGridManager : MonoBehaviour
             }
         }
     }
+
+    public void DropUnusedTiles()
+    {
+        if (gridTiles == null) return;
+
+        // Yerçekimini ekranın aşağısına (Z ekseninin negatifi) ve derinliğe (Y negatifi) verelim
+        Physics.gravity = new Vector3(0, -15f, -35f); 
+
+        for (int y = 0; y < rows; y++)
+        {
+            for (int x = 0; x < columns; x++)
+            {
+                LetterTile tile = gridTiles[x, y];
+                
+                // Bulunmamış harfleri (isSolved = false) yerçekimine teslim et
+                if (tile != null && !tile.isSolved)
+                {
+                    Rigidbody rb = tile.gameObject.GetComponent<Rigidbody>();
+                    if (rb == null)
+                    {
+                        rb = tile.gameObject.AddComponent<Rigidbody>();
+                    }
+                    
+                    rb.useGravity = true;
+                    // Objelerin sağa sola ve hafif yukarı patlayıp aşağı dökülmesi için ani kuvvet (Impulse)
+                    rb.AddForce(new Vector3(Random.Range(-3f, 3f), Random.Range(5f, 12f), Random.Range(-2f, 2f)), ForceMode.Impulse);
+                    
+                    // Havada takla atmaları için tork (dönüş kuvveti)
+                    rb.AddTorque(new Vector3(Random.Range(-15f, 15f), Random.Range(-15f, 15f), Random.Range(-15f, 15f)), ForceMode.Impulse);
+                }
+            }
+        }
+    }
 }
