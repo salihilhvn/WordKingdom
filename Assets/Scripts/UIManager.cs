@@ -348,7 +348,6 @@ public class UIManager : MonoBehaviour
     public void AddExtraTime(float extra)
     {
         remainingTime += extra;
-        UpdateTimerText();
     }
 
     public void InitializeWordList(List<string> words)

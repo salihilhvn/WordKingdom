@@ -136,7 +136,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.06, y: 0.49}
+  m_AnchoredPosition: {x: 0.06, y: 0.469}
   m_SizeDelta: {x: 10, y: 2}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3897964483293511571
@@ -169,15 +169,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: A
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5302535af1044152a457ed104f1f4b91, type: 2}
-  m_sharedMaterial: {fileID: 2100000, guid: b246c4190f4e46ec9352fe15a7b09ce0, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 730d676343e554c629c227b2bda8415b, type: 2}
+  m_sharedMaterial: {fileID: 2810834502383074629, guid: 730d676343e554c629c227b2bda8415b, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4278190080
+  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -5187,9 +5187,11 @@ MonoBehaviour:
   buttonRenderer: {fileID: 36181458725842091}
   baseRenderer: {fileID: 8634583017442375090}
   solveParticle: {fileID: 5887393937903815312}
-  defaultColor: {r: 0.13333334, g: 0.47058824, b: 0.23529412, a: 1}
-  selectedColor: {r: 0, g: 1, b: 0, a: 1}
-  solvedColor: {r: 0.2956568, g: 0.41509432, b: 0.3317658, a: 0.69411767}
+  defaultColor: {r: 0.65882355, g: 0.9019608, b: 0.8117647, a: 1}
+  selectedColor: {r: 0.3372549, g: 0.77254903, b: 0.5882353, a: 1}
+  solvedColor: {r: 1, g: 0.8745098, b: 0.52156866, a: 0.69411767}
+  errorColor: {r: 1, g: 0.4, b: 0.4, a: 1}
+  powerUpColor: {r: 1, g: 0, b: 0, a: 1}
   pressedYOffset: -0.25
 --- !u!1001 &1675655143064711215
 PrefabInstance:
@@ -5239,6 +5241,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 7a1baac13b23c40779cbd5575a205684, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 622878d5b39564dcdaa59a2bba642ec8, type: 2}
     - target: {fileID: 919132149155446097, guid: 7a1baac13b23c40779cbd5575a205684, type: 3}
       propertyPath: m_Name
       value: button
@@ -5341,6 +5347,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 2dffadfed187b43c8955d5b452892b89, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 5c8f6d712030a4a5ebf8701a3e641cd0, type: 2}
     - target: {fileID: 919132149155446097, guid: 2dffadfed187b43c8955d5b452892b89, type: 3}
       propertyPath: m_Name
       value: button_base

@@ -8,11 +8,16 @@ public class PowerUpManager : MonoBehaviour
 {
     public static PowerUpManager Instance;
 
-    [Header("Power-Up Buttons")]
     public Button tipButton;
     public Button wordyButton;
     public Button extraTimeButton;
     public Button coinGlazeButton;
+
+    [Header("Lock Icons")]
+    public GameObject tipLock;
+    public GameObject wordyLock;
+    public GameObject extraTimeLock;
+    public GameObject coinGlazeLock;
 
     [Header("Tutorial Panel UI")]
     public GameObject tutorialPanel;
@@ -32,6 +37,11 @@ public class PowerUpManager : MonoBehaviour
     private float coinGlazeTimer = 0f;
     private Coroutine coinGlazeCoroutine;
 
+    private Vector3 tipScale = Vector3.one;
+    private Vector3 wordyScale = Vector3.one;
+    private Vector3 extraTimeScale = Vector3.one;
+    private Vector3 coinGlazeScale = Vector3.one;
+
     // Which powerup is currently being tutorialized
     private string currentTutorialPowerUp = "";
     public bool isTutorialActive = false;
@@ -43,6 +53,8 @@ public class PowerUpManager : MonoBehaviour
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+
+        if (tutorialPanel) tutorialPanel.SetActive(false);
     }
 
     private void Start()
@@ -50,14 +62,28 @@ public class PowerUpManager : MonoBehaviour
         selectionManager = FindAnyObjectByType<WordSelectionManager>();
         gridManager = FindAnyObjectByType<WordGridManager>();
 
-        if (tutorialPanel) tutorialPanel.SetActive(false);
-
         if (okayButton) okayButton.onClick.AddListener(OnOkayClicked);
 
-        if (tipButton) tipButton.onClick.AddListener(UseTip);
-        if (wordyButton) wordyButton.onClick.AddListener(UseWordy);
-        if (extraTimeButton) extraTimeButton.onClick.AddListener(UseExtraTime);
-        if (coinGlazeButton) coinGlazeButton.onClick.AddListener(UseCoinGlaze);
+        if (tipButton) 
+        {
+            tipButton.onClick.AddListener(UseTip);
+            tipScale = tipButton.transform.localScale;
+        }
+        if (wordyButton) 
+        {
+            wordyButton.onClick.AddListener(UseWordy);
+            wordyScale = wordyButton.transform.localScale;
+        }
+        if (extraTimeButton) 
+        {
+            extraTimeButton.onClick.AddListener(UseExtraTime);
+            extraTimeScale = extraTimeButton.transform.localScale;
+        }
+        if (coinGlazeButton) 
+        {
+            coinGlazeButton.onClick.AddListener(UseCoinGlaze);
+            coinGlazeScale = coinGlazeButton.transform.localScale;
+        }
 
         UpdateButtonVisibility();
     }
@@ -70,13 +96,21 @@ public class PowerUpManager : MonoBehaviour
         // Adjust these numbers based on 0-based or 1-based index logic. User said: 
         // Level 4 (index 3), Level 8 (index 7), Level 12 (index 11), Level 14 (index 13).
         if (tipButton) tipButton.gameObject.SetActive(unlockedLevel >= 3);
+        if (tipLock) tipLock.SetActive(unlockedLevel < 3);
+
         if (wordyButton) wordyButton.gameObject.SetActive(unlockedLevel >= 7);
+        if (wordyLock) wordyLock.SetActive(unlockedLevel < 7);
+
         if (extraTimeButton) extraTimeButton.gameObject.SetActive(unlockedLevel >= 11);
+        if (extraTimeLock) extraTimeLock.SetActive(unlockedLevel < 11);
+
         if (coinGlazeButton) coinGlazeButton.gameObject.SetActive(unlockedLevel >= 13);
+        if (coinGlazeLock) coinGlazeLock.SetActive(unlockedLevel < 13);
     }
 
     public void CheckTutorials(int currentLevelIndex)
     {
+        if (tutorialPanel) tutorialPanel.SetActive(false);
         UpdateButtonVisibility();
         
         // Level 4 -> index 3
@@ -122,6 +156,8 @@ public class PowerUpManager : MonoBehaviour
         SetPowerUpButtonsInteractable(false);
     }
 
+    private Coroutine highlightCoroutine;
+
     private void OnOkayClicked()
     {
         if (tutorialPanel) tutorialPanel.SetActive(false);
@@ -129,34 +165,35 @@ public class PowerUpManager : MonoBehaviour
         // Highlight the forced powerup button
         SetPowerUpButtonsInteractable(false);
         
+        if (highlightCoroutine != null) StopCoroutine(highlightCoroutine);
+
         switch (currentTutorialPowerUp)
         {
             case "Tip":
-                if (tipButton) { tipButton.interactable = true; StartCoroutine(HighlightButton(tipButton.transform)); }
+                if (tipButton) { tipButton.interactable = true; highlightCoroutine = StartCoroutine(HighlightButton(tipButton.transform, tipScale)); }
                 break;
             case "Wordy":
-                if (wordyButton) { wordyButton.interactable = true; StartCoroutine(HighlightButton(wordyButton.transform)); }
+                if (wordyButton) { wordyButton.interactable = true; highlightCoroutine = StartCoroutine(HighlightButton(wordyButton.transform, wordyScale)); }
                 break;
             case "ExtraTime":
-                if (extraTimeButton) { extraTimeButton.interactable = true; StartCoroutine(HighlightButton(extraTimeButton.transform)); }
+                if (extraTimeButton) { extraTimeButton.interactable = true; highlightCoroutine = StartCoroutine(HighlightButton(extraTimeButton.transform, extraTimeScale)); }
                 break;
             case "CoinGlaze":
-                if (coinGlazeButton) { coinGlazeButton.interactable = true; StartCoroutine(HighlightButton(coinGlazeButton.transform)); }
+                if (coinGlazeButton) { coinGlazeButton.interactable = true; highlightCoroutine = StartCoroutine(HighlightButton(coinGlazeButton.transform, coinGlazeScale)); }
                 break;
         }
     }
 
-    private IEnumerator HighlightButton(Transform buttonTrans)
+    private IEnumerator HighlightButton(Transform buttonTrans, Vector3 origScale)
     {
         float elapsed = 0f;
-        Vector3 origScale = Vector3.one;
-        Vector3 targetScale = new Vector3(1.2f, 1.2f, 1.2f);
+        Vector3 targetScale = origScale * 1.25f; // %25 büyüsün
         
         // Blink scale
         while (isTutorialActive)
         {
             elapsed += Time.deltaTime;
-            float pingPong = Mathf.PingPong(elapsed * 2f, 1f);
+            float pingPong = Mathf.PingPong(elapsed * 4f, 1f); // Hızlandırdım
             buttonTrans.localScale = Vector3.Lerp(origScale, targetScale, pingPong);
             yield return null;
         }

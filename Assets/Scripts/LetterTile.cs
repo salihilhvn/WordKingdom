@@ -27,7 +27,7 @@ public class LetterTile : MonoBehaviour
     public Color selectedColor = Color.green;
     public Color solvedColor = Color.yellow;
     public Color errorColor = new Color(1f, 0.4f, 0.4f); // Yumuşak bir kırmızı
-    public Color powerUpColor = Color.red; // Tip ve Wordy için kırmızı renk
+    public Color powerUpColor = new Color(1f, 0.65f, 0f); // Tip ve Wordy için (Altın/Koyu Sarı)
 
     [Header("Animation Settings")]
     [Tooltip("Çözüldüğünde butonun Y ekseninde ne kadar aşağı ineceği (Örn: -0.25)")]
@@ -40,6 +40,9 @@ public class LetterTile : MonoBehaviour
 
     private void Start()
     {
+        // Unity Inspector'daki eski kırmızı rengi ezmek için koddan zorla altın/turuncu atıyoruz
+        powerUpColor = new Color(1f, 0.65f, 0f);
+
         if (buttonRenderer != null)
         {
             originalLocalPos = buttonRenderer.transform.localPosition;

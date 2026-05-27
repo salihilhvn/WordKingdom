@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using System.Collections;
+using DG.Tweening;
 
 public class SettingsManager : MonoBehaviour
 {
@@ -25,11 +26,11 @@ public class SettingsManager : MonoBehaviour
     public Sprite vibrationOffSprite;
 
     [Header("Animation Settings")]
-    public float animationDuration = 0.3f;
+    public float animationDuration = 0.5f;
     private Vector2 hiddenPos;
     private Vector2 shownPos;
+    private Vector3 originalPanelScale = Vector3.one;
     private bool isPanelOpen = false;
-    private Coroutine animCoroutine;
 
     private void Awake()
     {
@@ -42,10 +43,28 @@ public class SettingsManager : MonoBehaviour
         if (settingsPanel != null)
         {
             shownPos = settingsPanel.anchoredPosition;
-            hiddenPos = shownPos + new Vector2(0, -settingsPanel.rect.height - 200f); 
+            originalPanelScale = settingsPanel.localScale;
+            // Artık ekranın dışından değil, direkt ayarlar butonunun olduğu yerden çıkacak
+            if (settingsToggleButton != null)
+            {
+                hiddenPos = settingsToggleButton.GetComponent<RectTransform>().anchoredPosition;
+            }
+            else
+            {
+                hiddenPos = shownPos + new Vector2(0, -200f);
+            }
             settingsPanel.anchoredPosition = hiddenPos;
+            settingsPanel.localScale = Vector3.zero; // Başlangıçta 0 boyutunda
             settingsPanel.gameObject.SetActive(false);
         }
+
+        // Eğer kullanıcı Inspector'da Image objelerini sürüklemeyi unuttuysa butonun kendi resmini al
+        if (soundIconImage == null && soundButton != null) soundIconImage = soundButton.GetComponent<Image>();
+        if (vibrationIconImage == null && vibrationButton != null) vibrationIconImage = vibrationButton.GetComponent<Image>();
+
+        // Eğer kullanıcı On (Açık) resimlerini sürüklemeyi unuttuysa, UI'daki varsayılan resmi "On" resmi olarak kabul et
+        if (soundOnSprite == null && soundIconImage != null) soundOnSprite = soundIconImage.sprite;
+        if (vibrationOnSprite == null && vibrationIconImage != null) vibrationOnSprite = vibrationIconImage.sprite;
 
         if (settingsToggleButton) settingsToggleButton.onClick.AddListener(TogglePanel);
         if (mainMenuButton) mainMenuButton.onClick.AddListener(GoToMainMenu);
@@ -64,33 +83,35 @@ public class SettingsManager : MonoBehaviour
             settingsPanel.gameObject.SetActive(true);
         }
 
-        if (animCoroutine != null) StopCoroutine(animCoroutine);
-        animCoroutine = StartCoroutine(AnimatePanel(isPanelOpen ? shownPos : hiddenPos));
-    }
-
-    private IEnumerator AnimatePanel(Vector2 targetPos)
-    {
-        if (settingsPanel == null) yield break;
-
-        Vector2 startPos = settingsPanel.anchoredPosition;
-        float elapsed = 0f;
-
-        while (elapsed < animationDuration)
+        // Ayarlar butonunu tatlı bir şekilde döndür
+        if (settingsToggleButton != null)
         {
-            elapsed += Time.deltaTime;
-            float t = elapsed / animationDuration;
-            
-            float easeT = t * (2f - t);
-            
-            settingsPanel.anchoredPosition = Vector2.Lerp(startPos, targetPos, easeT);
-            yield return null;
+            float targetZ = isPanelOpen ? -180f : 0f;
+            settingsToggleButton.transform.DORotate(new Vector3(0, 0, targetZ), animationDuration, RotateMode.Fast)
+                .SetEase(Ease.OutBack);
         }
 
-        settingsPanel.anchoredPosition = targetPos;
-
-        if (!isPanelOpen)
+        if (settingsPanel != null)
         {
-            settingsPanel.gameObject.SetActive(false);
+            // Eğer halihazırda çalan bir animasyon varsa durdur ki üst üste binmesin
+            settingsPanel.DOKill();
+
+            if (isPanelOpen)
+            {
+                settingsPanel.anchoredPosition = hiddenPos;
+                settingsPanel.localScale = Vector3.zero; // Butonun içinden küçücükten başlayıp büyüyecek
+
+                // Hem pozisyon olarak yerine gitsin hem de büyüsün (Juicy)
+                settingsPanel.DOAnchorPos(shownPos, animationDuration).SetEase(Ease.OutBack);
+                settingsPanel.DOScale(originalPanelScale, animationDuration).SetEase(Ease.OutBack);
+            }
+            else
+            {
+                // Çarkın içine doğru küçülerek geri dönsün
+                settingsPanel.DOAnchorPos(hiddenPos, animationDuration * 0.8f).SetEase(Ease.InBack);
+                settingsPanel.DOScale(Vector3.zero, animationDuration * 0.8f).SetEase(Ease.InBack)
+                    .OnComplete(() => settingsPanel.gameObject.SetActive(false));
+            }
         }
     }
 
@@ -139,7 +160,8 @@ public class SettingsManager : MonoBehaviour
     {
         if (soundIconImage != null)
         {
-            soundIconImage.sprite = isOn ? soundOnSprite : soundOffSprite;
+            Sprite targetSprite = isOn ? soundOnSprite : soundOffSprite;
+            if (targetSprite != null) soundIconImage.sprite = targetSprite;
         }
     }
 
@@ -147,7 +169,8 @@ public class SettingsManager : MonoBehaviour
     {
         if (vibrationIconImage != null)
         {
-            vibrationIconImage.sprite = isOn ? vibrationOnSprite : vibrationOffSprite;
+            Sprite targetSprite = isOn ? vibrationOnSprite : vibrationOffSprite;
+            if (targetSprite != null) vibrationIconImage.sprite = targetSprite;
         }
     }
 
