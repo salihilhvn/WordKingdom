@@ -27,6 +27,7 @@ public class LetterTile : MonoBehaviour
     public Color selectedColor = Color.green;
     public Color solvedColor = Color.yellow;
     public Color errorColor = new Color(1f, 0.4f, 0.4f); // Yumuşak bir kırmızı
+    public Color powerUpColor = Color.red; // Tip ve Wordy için kırmızı renk
 
     [Header("Animation Settings")]
     [Tooltip("Çözüldüğünde butonun Y ekseninde ne kadar aşağı ineceği (Örn: -0.25)")]
@@ -199,6 +200,16 @@ public class LetterTile : MonoBehaviour
         // Doğru kelimede daha derin bir basılma ve sarı renk
         Vector3 targetPos = originalLocalPos + new Vector3(0, pressedYOffset, 0);
         AnimateToState(targetPos, originalScale, solvedColor, 0.35f, delay, true, true); // true parametresi partikül patlaması için
+    }
+
+    public void HighlightAsPowerUp(float delay = 0f)
+    {
+        if (isSolved) return; 
+
+        isSolved = true;
+
+        Vector3 targetPos = originalLocalPos + new Vector3(0, pressedYOffset, 0);
+        AnimateToState(targetPos, originalScale, powerUpColor, 0.35f, delay, true, true);
     }
 
     private void AnimateToState(Vector3 targetPos, Vector3 targetScale, Color targetColor, float duration, float delay = 0f, bool isSolveAnim = false, bool useBounce = true)

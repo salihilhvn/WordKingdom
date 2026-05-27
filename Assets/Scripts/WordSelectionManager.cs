@@ -56,6 +56,11 @@ public class WordSelectionManager : MonoBehaviour
         {
             UIManager.Instance.InitializeWordList(targetWords);
         }
+
+        if (PowerUpManager.Instance != null)
+        {
+            PowerUpManager.Instance.CheckTutorials(gridManager.currentLevelIndex);
+        }
     }
 
     private void Update()
@@ -68,6 +73,8 @@ public class WordSelectionManager : MonoBehaviour
         if (UIManager.Instance != null && UIManager.Instance.IsPopupActive())
             return; // Pop-up açıksa arkadaki harflere tıklanmasını tamamen engelle
 
+        if (PowerUpManager.Instance != null && PowerUpManager.Instance.isTutorialActive)
+            return; // Tutorial açıksa grid'e tıklanmasın
         bool isPointerDown = false;
         bool isPointerPressed = false;
         bool isPointerUp = false;
@@ -425,6 +432,11 @@ public class WordSelectionManager : MonoBehaviour
         }
     }
 
+    public void CheckLevelCompletionFromExternal()
+    {
+        CheckLevelCompletion();
+    }
+
     private System.Collections.IEnumerator NextLevelRoutine()
     {
         // 1. Şok dalgası ve altınların animasyonuna başlaması için çok kısa bir an bekle
@@ -491,6 +503,11 @@ public class WordSelectionManager : MonoBehaviour
                 UIManager.Instance.InitializeWordList(targetWords);
             }
 
+            if (PowerUpManager.Instance != null)
+            {
+                PowerUpManager.Instance.CheckTutorials(gridManager.currentLevelIndex);
+            }
+
             Debug.Log("Seviye " + (gridManager.currentLevelIndex + 1) + " Başladı!");
         }
     }
@@ -507,6 +524,11 @@ public class WordSelectionManager : MonoBehaviour
         {
             UIManager.Instance.ResetUI(120f);
             UIManager.Instance.InitializeWordList(targetWords);
+        }
+
+        if (PowerUpManager.Instance != null)
+        {
+            PowerUpManager.Instance.CheckTutorials(gridManager.currentLevelIndex);
         }
     }
 }

@@ -12,7 +12,7 @@ public class UIManager : MonoBehaviour
     [Header("Timer Settings")]
     public TMP_Text timeText;
     public float remainingTime = 120f; // 2 dakika (Saniye cinsinden)
-    private bool isTimerRunning = true;
+    private bool isTimerRunning = false; // Oyuna başlarken power-up tutorialı çıkabilir, timer'ı isTimerRunning ile kontrol edeceğiz
     private Color originalTimeColor = Color.white;
 
     [Header("Coin Settings")]
@@ -319,7 +319,7 @@ public class UIManager : MonoBehaviour
     public void ResetUI(float newTime)
     {
         remainingTime = newTime;
-        isTimerRunning = true;
+        // isTimerRunning'i direkt true yapmıyoruz. PowerUpManager CheckTutorials'dan sonra ResumeTimer() ile yapacak.
         if (timeText != null)
         {
             timeText.color = originalTimeColor;
@@ -333,6 +333,22 @@ public class UIManager : MonoBehaviour
         }
 
         ResetMultiplier();
+    }
+
+    public void PauseTimer()
+    {
+        isTimerRunning = false;
+    }
+
+    public void ResumeTimer()
+    {
+        isTimerRunning = true;
+    }
+
+    public void AddExtraTime(float extra)
+    {
+        remainingTime += extra;
+        UpdateTimerText();
     }
 
     public void InitializeWordList(List<string> words)
@@ -519,6 +535,12 @@ public class UIManager : MonoBehaviour
 
     private void IncrementCoin(int amount)
     {
+        // Coin Glaze power-up aktifse gelen coin 2 katına çıkar
+        if (PowerUpManager.Instance != null && PowerUpManager.Instance.isCoinGlazeActive)
+        {
+            amount *= 2;
+        }
+
         currentCoins += amount;
         if (coinsText != null)
         {
