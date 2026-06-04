@@ -20,6 +20,12 @@ public class MainMenuManager : MonoBehaviour
     public Button rankButton;
     public Button collectionButton;
 
+    [Header("Bottom Nav Panels")]
+    public GameObject homePanel;
+    public GameObject storePanel;
+    public GameObject rankPanel;
+    public GameObject collectionPanel;
+
     [Header("Signifier Settings (Kayma Efekti)")]
     public RectTransform activeSignifier;
     public float slideDuration = 0.35f; // Kayma süresi
@@ -41,17 +47,26 @@ public class MainMenuManager : MonoBehaviour
         if (levelsButton != null) levelsButton.onClick.AddListener(OnLevelsClicked);
 
         // Alt Navigasyon Butonları
-        if (homeButton != null) homeButton.onClick.AddListener(() => SwitchTab(homeButton.GetComponent<RectTransform>()));
-        if (storeButton != null) storeButton.onClick.AddListener(() => SwitchTab(storeButton.GetComponent<RectTransform>()));
-        if (rankButton != null) rankButton.onClick.AddListener(() => SwitchTab(rankButton.GetComponent<RectTransform>()));
-        if (collectionButton != null) collectionButton.onClick.AddListener(() => SwitchTab(collectionButton.GetComponent<RectTransform>()));
+        if (homeButton != null) homeButton.onClick.AddListener(() => { SwitchTab(homeButton.GetComponent<RectTransform>()); ShowPanel(homePanel); });
+        if (storeButton != null) storeButton.onClick.AddListener(() => { SwitchTab(storeButton.GetComponent<RectTransform>()); ShowPanel(storePanel); });
+        if (rankButton != null) rankButton.onClick.AddListener(() => { SwitchTab(rankButton.GetComponent<RectTransform>()); ShowPanel(rankPanel); });
+        if (collectionButton != null) collectionButton.onClick.AddListener(() => { SwitchTab(collectionButton.GetComponent<RectTransform>()); ShowPanel(collectionPanel); });
 
         // Başlangıçta Home seçili gelsin
         if (activeSignifier != null && homeButton != null)
         {
             Vector3 startPos = homeButton.GetComponent<RectTransform>().position;
             activeSignifier.position = new Vector3(startPos.x, activeSignifier.position.y, activeSignifier.position.z);
+            ShowPanel(homePanel);
         }
+    }
+
+    private void ShowPanel(GameObject targetPanel)
+    {
+        if (homePanel != null) homePanel.SetActive(homePanel == targetPanel);
+        if (storePanel != null) storePanel.SetActive(storePanel == targetPanel);
+        if (rankPanel != null) rankPanel.SetActive(rankPanel == targetPanel);
+        if (collectionPanel != null) collectionPanel.SetActive(collectionPanel == targetPanel);
     }
 
     private void OnPlayClicked()
