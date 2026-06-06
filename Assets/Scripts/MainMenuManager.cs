@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TMPro;
 using DG.Tweening; // DOTween kütüphanesi eklendi
 
 public class MainMenuManager : MonoBehaviour
@@ -13,6 +14,11 @@ public class MainMenuManager : MonoBehaviour
     [Header("Center Buttons")]
     public Button playButton;
     public Button levelsButton;
+    public Button powerUpStoreButton;
+
+    [Header("Power-Up Store Panel")]
+    public GameObject powerUpStorePanel;
+    public Button closePowerUpStoreButton;
 
     [Header("Bottom Nav Buttons")]
     public Button homeButton;
@@ -33,11 +39,16 @@ public class MainMenuManager : MonoBehaviour
     [Header("Levels Panel")]
     public LevelsPanelManager levelsPanelManager;
 
+    [Header("Coin Counters")]
+    public TMP_Text[] totalCoinTexts;
+
     // Her butonun orijinal boyutunu aklımızda tutmak için sözlük
     private Dictionary<RectTransform, Vector3> originalScales = new Dictionary<RectTransform, Vector3>();
 
     private void Start()
     {
+        UpdateTotalCoinsUI();
+
         // Üst Butonlar
         if (settingsButton != null) settingsButton.onClick.AddListener(OnSettingsClicked);
         if (helpButton != null) helpButton.onClick.AddListener(OnHelpClicked);
@@ -45,6 +56,10 @@ public class MainMenuManager : MonoBehaviour
         // Orta Butonlar
         if (playButton != null) playButton.onClick.AddListener(OnPlayClicked);
         if (levelsButton != null) levelsButton.onClick.AddListener(OnLevelsClicked);
+        if (powerUpStoreButton != null) powerUpStoreButton.onClick.AddListener(OnPowerUpStoreClicked);
+        
+        // Power-Up Store Kapatma Butonu
+        if (closePowerUpStoreButton != null) closePowerUpStoreButton.onClick.AddListener(ClosePowerUpStore);
 
         // Alt Navigasyon Butonları
         if (homeButton != null) homeButton.onClick.AddListener(() => { SwitchTab(homeButton.GetComponent<RectTransform>()); ShowPanel(homePanel); });
@@ -67,6 +82,20 @@ public class MainMenuManager : MonoBehaviour
         if (storePanel != null) storePanel.SetActive(storePanel == targetPanel);
         if (rankPanel != null) rankPanel.SetActive(rankPanel == targetPanel);
         if (collectionPanel != null) collectionPanel.SetActive(collectionPanel == targetPanel);
+        
+        UpdateTotalCoinsUI(); // Sekme değiştiğinde coinleri de güncelleyelim
+    }
+
+    public void UpdateTotalCoinsUI()
+    {
+        int total = PlayerPrefs.GetInt("TotalCoins", 0);
+        if (totalCoinTexts != null)
+        {
+            foreach (var txt in totalCoinTexts)
+            {
+                if (txt != null) txt.text = total.ToString();
+            }
+        }
     }
 
     private void OnPlayClicked()
@@ -86,6 +115,23 @@ public class MainMenuManager : MonoBehaviour
         }
     }
     
+    private void OnPowerUpStoreClicked()
+    {
+        if (powerUpStorePanel != null)
+        {
+            powerUpStorePanel.SetActive(true);
+            UpdateTotalCoinsUI(); // Panel açılınca da güncelleyelim
+        }
+    }
+
+    private void ClosePowerUpStore()
+    {
+        if (powerUpStorePanel != null)
+        {
+            powerUpStorePanel.SetActive(false);
+        }
+    }
+
     private void OnSettingsClicked() {}
     private void OnHelpClicked() {}
 

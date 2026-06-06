@@ -20,7 +20,7 @@ public class UIManager : MonoBehaviour
     public RectTransform coinTargetUI; // Sol üstteki Coin ikonu veya paneli
     public AudioSource uiAudioSource;
     public AudioClip coinTickSound;
-    private int currentCoins = 0;
+    private int currentLevelCoins = 0;
 
     [Header("Coin Fly Animation")]
     public Canvas mainCanvas; // UI Coinlerin spawn olacağı ana canvas
@@ -104,7 +104,7 @@ public class UIManager : MonoBehaviour
 
         if (coinsText != null)
         {
-            coinsText.text = currentCoins.ToString();
+            coinsText.text = currentLevelCoins.ToString();
         }
 
         // Eğer Canvas atanmamışsa sahnede bulmaya çalış
@@ -326,10 +326,10 @@ public class UIManager : MonoBehaviour
             timeText.transform.localScale = Vector3.one;
         }
 
-        currentCoins = 0;
+        currentLevelCoins = 0;
         if (coinsText != null)
         {
-            coinsText.text = currentCoins.ToString();
+            coinsText.text = currentLevelCoins.ToString();
         }
 
         ResetMultiplier();
@@ -540,10 +540,11 @@ public class UIManager : MonoBehaviour
             amount *= 2;
         }
 
-        currentCoins += amount;
+        currentLevelCoins += amount;
+        
         if (coinsText != null)
         {
-            coinsText.text = currentCoins.ToString();
+            coinsText.text = currentLevelCoins.ToString();
             
             // Text'e zıplama efekti
             StartCoroutine(CoinTextPopRoutine());
@@ -610,7 +611,7 @@ public class UIManager : MonoBehaviour
         {
             levelPassedCoinText.text = "0";
             if (coinAnimCoroutine != null) StopCoroutine(coinAnimCoroutine);
-            coinAnimCoroutine = StartCoroutine(AnimateCoinsTo(currentCoins));
+            coinAnimCoroutine = StartCoroutine(AnimateCoinsTo(currentLevelCoins));
         }
     }
 
@@ -731,16 +732,30 @@ public class UIManager : MonoBehaviour
     private void OnWatchAdCoins()
     {
         // Şimdilik 2 katı verelim direkt (Daha sonra gerçek AD sistemi eklenecek)
-        currentCoins *= 2;
-        if (coinsText) coinsText.text = currentCoins.ToString();
-        if (levelPassedCoinText) levelPassedCoinText.text = currentCoins.ToString();
+        currentLevelCoins *= 2;                  // Asıl kazanılanı 2 katına çıkar
+        
+        if (coinsText) coinsText.text = currentLevelCoins.ToString();
+        if (levelPassedCoinText) levelPassedCoinText.text = currentLevelCoins.ToString();
         
         // Butonu kapat ki 2 kere izleyemesin
         if (lpWatchAdButton) lpWatchAdButton.interactable = false;
     }
 
+    private void SaveCoinsToGlobal()
+    {
+        if (currentLevelCoins > 0)
+        {
+            int total = PlayerPrefs.GetInt("TotalCoins", 0);
+            total += currentLevelCoins;
+            PlayerPrefs.SetInt("TotalCoins", total);
+            PlayerPrefs.Save();
+            currentLevelCoins = 0; // İki kere kaydedilmesini engellemek için sıfırla
+        }
+    }
+
     private void OnNextLevel()
     {
+        SaveCoinsToGlobal();
         if (levelPassedPanel) levelPassedPanel.SetActive(false);
         if (blurBackgroundPanel) blurBackgroundPanel.SetActive(false);
         FindAnyObjectByType<WordSelectionManager>().LoadNextLevel();
@@ -748,6 +763,10 @@ public class UIManager : MonoBehaviour
 
     private void OnMainMenu()
     {
+        if (levelPassedPanel != null && levelPassedPanel.activeSelf)
+        {
+            SaveCoinsToGlobal();
+        }
         SceneManager.LoadScene("MainMenu");
     }
 
