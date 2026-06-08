@@ -20,6 +20,17 @@ public class MainMenuManager : MonoBehaviour
     public GameObject powerUpStorePanel;
     public Button closePowerUpStoreButton;
 
+    [Header("Power-Up Store Purchases")]
+    public Button buyTipButton;
+    public Button buyWordyButton;
+    public Button buyExtraTimeButton;
+    public Button buyCoinGlazeButton;
+
+    private readonly int tipPrice = 400;
+    private readonly int wordyPrice = 650;
+    private readonly int extraTimePrice = 500;
+    private readonly int coinGlazePrice = 800;
+
     [Header("Bottom Nav Buttons")]
     public Button homeButton;
     public Button storeButton;
@@ -60,6 +71,12 @@ public class MainMenuManager : MonoBehaviour
         
         // Power-Up Store Kapatma Butonu
         if (closePowerUpStoreButton != null) closePowerUpStoreButton.onClick.AddListener(ClosePowerUpStore);
+
+        // Power-Up Satın Alma Butonları
+        if (buyTipButton != null) buyTipButton.onClick.AddListener(() => BuyPowerUp("TipCount", tipPrice));
+        if (buyWordyButton != null) buyWordyButton.onClick.AddListener(() => BuyPowerUp("WordyCount", wordyPrice));
+        if (buyExtraTimeButton != null) buyExtraTimeButton.onClick.AddListener(() => BuyPowerUp("ExtraTimeCount", extraTimePrice));
+        if (buyCoinGlazeButton != null) buyCoinGlazeButton.onClick.AddListener(() => BuyPowerUp("CoinGlazeCount", coinGlazePrice));
 
         // Alt Navigasyon Butonları
         if (homeButton != null) homeButton.onClick.AddListener(() => { SwitchTab(homeButton.GetComponent<RectTransform>()); ShowPanel(homePanel); });
@@ -129,6 +146,28 @@ public class MainMenuManager : MonoBehaviour
         if (powerUpStorePanel != null)
         {
             powerUpStorePanel.SetActive(false);
+        }
+    }
+
+    private void BuyPowerUp(string prefsKey, int price)
+    {
+        int totalCoins = PlayerPrefs.GetInt("TotalCoins", 0);
+        if (totalCoins >= price)
+        {
+            // Satın alımı gerçekleştir
+            totalCoins -= price;
+            PlayerPrefs.SetInt("TotalCoins", totalCoins);
+            
+            int currentCount = PlayerPrefs.GetInt(prefsKey, 0);
+            PlayerPrefs.SetInt(prefsKey, currentCount + 1);
+            PlayerPrefs.Save();
+            
+            // Arayüzü güncelle
+            UpdateTotalCoinsUI();
+        }
+        else
+        {
+            // Para yetmiyor, şimdilik sessizce reddediyoruz (isteğe bağlı animasyon konabilir)
         }
     }
 

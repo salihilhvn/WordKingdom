@@ -19,6 +19,23 @@ public class PowerUpManager : MonoBehaviour
     public GameObject extraTimeLock;
     public GameObject coinGlazeLock;
 
+    [Header("Power-Up Credits UI")]
+    public GameObject tipCountObj;
+    public TMP_Text tipCountText;
+    public GameObject tipPlusObj;
+
+    public GameObject wordyCountObj;
+    public TMP_Text wordyCountText;
+    public GameObject wordyPlusObj;
+
+    public GameObject extraTimeCountObj;
+    public TMP_Text extraTimeCountText;
+    public GameObject extraTimePlusObj;
+
+    public GameObject coinGlazeCountObj;
+    public TMP_Text coinGlazeCountText;
+    public GameObject coinGlazePlusObj;
+
     [Header("Tutorial Panel UI")]
     public GameObject tutorialPanel;
     public Image powerUpIconImage;
@@ -86,6 +103,31 @@ public class PowerUpManager : MonoBehaviour
         }
 
         UpdateButtonVisibility();
+        UpdateCreditUI();
+    }
+
+    public void UpdateCreditUI()
+    {
+        UpdateSingleCreditUI("TipCount", tipCountObj, tipCountText, tipPlusObj);
+        UpdateSingleCreditUI("WordyCount", wordyCountObj, wordyCountText, wordyPlusObj);
+        UpdateSingleCreditUI("ExtraTimeCount", extraTimeCountObj, extraTimeCountText, extraTimePlusObj);
+        UpdateSingleCreditUI("CoinGlazeCount", coinGlazeCountObj, coinGlazeCountText, coinGlazePlusObj);
+    }
+
+    private void UpdateSingleCreditUI(string prefsKey, GameObject countObj, TMP_Text countText, GameObject plusObj)
+    {
+        int count = PlayerPrefs.GetInt(prefsKey, 0);
+        if (count > 0)
+        {
+            if (countObj) countObj.SetActive(true);
+            if (countText) countText.text = count.ToString();
+            if (plusObj) plusObj.SetActive(false);
+        }
+        else
+        {
+            if (countObj) countObj.SetActive(false);
+            if (plusObj) plusObj.SetActive(true);
+        }
     }
 
     public void UpdateButtonVisibility()
@@ -226,6 +268,9 @@ public class PowerUpManager : MonoBehaviour
     {
         if (selectionManager == null || gridManager == null) return;
         
+        bool isTutorial = isTutorialActive && currentTutorialPowerUp == "Tip";
+        if (!isTutorial && PlayerPrefs.GetInt("TipCount", 0) <= 0) return; // Hak yoksa çık
+        
         // Find an unfound word
         string targetWord = GetRandomUnfoundWord();
         if (string.IsNullOrEmpty(targetWord)) return;
@@ -257,12 +302,21 @@ public class PowerUpManager : MonoBehaviour
             targetTile.HighlightAsPowerUp(0f);
         }
 
+        if (!isTutorial)
+        {
+            PlayerPrefs.SetInt("TipCount", PlayerPrefs.GetInt("TipCount", 0) - 1);
+            UpdateCreditUI();
+        }
+
         FinishTutorial("Tip");
     }
 
     public void UseWordy()
     {
         if (selectionManager == null || gridManager == null) return;
+        
+        bool isTutorial = isTutorialActive && currentTutorialPowerUp == "Wordy";
+        if (!isTutorial && PlayerPrefs.GetInt("WordyCount", 0) <= 0) return; // Hak yoksa çık
         
         string targetWord = GetRandomUnfoundWord();
         if (string.IsNullOrEmpty(targetWord)) return;
@@ -296,19 +350,45 @@ public class PowerUpManager : MonoBehaviour
         // Need to check level completion from selectionManager
         selectionManager.CheckLevelCompletionFromExternal();
 
+        if (!isTutorial)
+        {
+            PlayerPrefs.SetInt("WordyCount", PlayerPrefs.GetInt("WordyCount", 0) - 1);
+            UpdateCreditUI();
+        }
+
         FinishTutorial("Wordy");
     }
 
     public void UseExtraTime()
     {
+        bool isTutorial = isTutorialActive && currentTutorialPowerUp == "ExtraTime";
+        if (!isTutorial && PlayerPrefs.GetInt("ExtraTimeCount", 0) <= 0) return; // Hak yoksa çık
+
         UIManager.Instance.AddExtraTime(20f);
+        
+        if (!isTutorial)
+        {
+            PlayerPrefs.SetInt("ExtraTimeCount", PlayerPrefs.GetInt("ExtraTimeCount", 0) - 1);
+            UpdateCreditUI();
+        }
+
         FinishTutorial("ExtraTime");
     }
 
     public void UseCoinGlaze()
     {
+        bool isTutorial = isTutorialActive && currentTutorialPowerUp == "CoinGlaze";
+        if (!isTutorial && PlayerPrefs.GetInt("CoinGlazeCount", 0) <= 0) return; // Hak yoksa çık
+
         if (coinGlazeCoroutine != null) StopCoroutine(coinGlazeCoroutine);
         coinGlazeCoroutine = StartCoroutine(CoinGlazeRoutine());
+        
+        if (!isTutorial)
+        {
+            PlayerPrefs.SetInt("CoinGlazeCount", PlayerPrefs.GetInt("CoinGlazeCount", 0) - 1);
+            UpdateCreditUI();
+        }
+
         FinishTutorial("CoinGlaze");
     }
 
